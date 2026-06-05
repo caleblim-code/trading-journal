@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { toast } from 'sonner';
+import { Loader2, Plus, CheckCircle2 } from 'lucide-react';
 
 export default function TradeForm() {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   
@@ -51,9 +52,9 @@ export default function TradeForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId || !accountId) return setError('Account not initialized');
+    if (!userId || !accountId) return toast.error('Account not initialized. Please refresh.');
     setLoading(true);
-    setError('');
+    const toastId = toast.loading('Saving trade to database...');
 
     const setupsArray = setups.split(',').map(s => s.trim()).filter(Boolean);
     const mistakesArray = mistakes.split(',').map(m => m.trim()).filter(Boolean);
@@ -78,7 +79,7 @@ export default function TradeForm() {
 
     if (tradeError) {
       setLoading(false);
-      return setError(tradeError.message);
+      return toast.error(tradeError.message, { id: toastId });
     }
 
     const tradeId = tradeData[0].id;
@@ -109,18 +110,18 @@ export default function TradeForm() {
       const { error: execError } = await supabase.from('executions').insert(execsToInsert);
       if (execError) {
         setLoading(false);
-        return setError('Trade saved, but executions failed: ' + execError.message);
+        return toast.error('Trade saved, but executions failed: ' + execError.message, { id: toastId });
       }
     }
 
     setLoading(false);
+    toast.success('Trade logged successfully!', { id: toastId });
     router.push('/dashboard');
     router.refresh();
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {error && <div style={{ color: 'var(--danger)', padding: '1rem', backgroundColor: 'var(--danger-bg)', borderRadius: 'var(--radius-md)' }}>{error}</div>}
       
       {/* Container blocks */}
       <div style={{ backgroundColor: 'var(--surface)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--surface-border)', boxShadow: 'var(--shadow-sm)' }}>
@@ -203,10 +204,12 @@ export default function TradeForm() {
       </div>
 
       <button type="submit" disabled={loading} style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
         padding: '1rem', backgroundColor: 'var(--primary)', color: '#000', fontSize: '1.1rem', fontWeight: 700,
         border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', boxShadow: 'var(--glow-primary)',
-        opacity: loading ? 0.7 : 1, transition: 'opacity 0.2s'
+        opacity: loading ? 0.7 : 1, transition: 'all 0.2s'
       }}>
+        {loading ? <Loader2 className="spin" size={20} /> : <CheckCircle2 size={20} />}
         {loading ? 'Saving to Database...' : 'Log Trade'}
       </button>
     </form>

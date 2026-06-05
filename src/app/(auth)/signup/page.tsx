@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { signup } from '@/app/actions/auth';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 export default function SignupPage({
   searchParams,
@@ -55,13 +56,13 @@ export default function SignupPage({
             </div>
           )}
 
-          <button style={{
+          <SubmitButton style={{
             marginTop: '1rem', width: '100%', padding: '0.75rem', backgroundColor: 'var(--primary)',
             color: '#000', fontWeight: 600, border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer',
             boxShadow: 'var(--glow-primary)'
           }}>
             Sign Up
-          </button>
+          </SubmitButton>
         </form>
 
         <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
