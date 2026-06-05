@@ -19,8 +19,9 @@ export default function MarketingLayout({
         top: 0,
         zIndex: 100
       }}>
-        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.5px' }}>
-          ZellaClone
+        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ width: '24px', height: '24px', backgroundColor: 'var(--primary)', borderRadius: '6px', boxShadow: 'var(--glow-primary)' }}></div>
+          OneTrade
         </div>
         <nav style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
           <Link href="/features" style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>Features</Link>
@@ -47,7 +48,7 @@ export default function MarketingLayout({
         textAlign: 'center',
         color: 'var(--text-tertiary)'
       }}>
-        <p>© 2024 ZellaClone. All rights reserved.</p>
+        <p>© 2024 OneTrade. All rights reserved.</p>
       </footer>
     </div>
   );

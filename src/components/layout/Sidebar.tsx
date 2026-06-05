@@ -17,8 +17,8 @@ export default function Sidebar() {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logo}>
-        <div style={{ width: '24px', height: '24px', backgroundColor: 'var(--primary)', borderRadius: '4px' }}></div>
-        Trading Journal
+        <div style={{ width: '24px', height: '24px', backgroundColor: 'var(--primary)', borderRadius: '4px', boxShadow: 'var(--glow-primary)' }}></div>
+        OneTrade
       </div>
       <nav className={styles.nav}>
         {navItems.map((item) => {

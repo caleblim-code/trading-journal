@@ -5,8 +5,13 @@ export default function LandingPage() {
       <section style={{
         padding: '8rem 5%',
         textAlign: 'center',
-        background: 'linear-gradient(180deg, var(--primary-light) 0%, var(--background) 100%)',
+        background: 'linear-gradient(180deg, rgba(62, 207, 142, 0.05) 0%, var(--background) 100%)',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
+        {/* Glow effect in background */}
+        <div style={{ position: 'absolute', top: '-100px', left: '50%', transform: 'translateX(-50%)', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(62,207,142,0.15) 0%, rgba(15,17,26,0) 70%)', zIndex: 0 }}></div>
+        <div style={{ position: 'relative', zIndex: 1 }}>
         <h1 style={{ 
           fontSize: '4.5rem', 
           fontWeight: 800, 
@@ -38,18 +43,19 @@ export default function LandingPage() {
             border: 'none',
             borderRadius: 'var(--radius-lg)',
             cursor: 'pointer',
-            boxShadow: 'var(--shadow-md)'
+            boxShadow: 'var(--glow-primary)'
           }}>Get Started for Free</button>
           <button style={{
             padding: '1rem 2.5rem',
             fontSize: '1.1rem',
             fontWeight: 600,
-            backgroundColor: 'var(--surface)',
+            backgroundColor: 'transparent',
             color: 'var(--text-primary)',
             border: '1px solid var(--surface-border)',
             borderRadius: 'var(--radius-lg)',
             cursor: 'pointer'
           }}>View Demo</button>
+        </div>
         </div>
       </section>
 
@@ -94,7 +100,7 @@ export default function LandingPage() {
       <section style={{ padding: '5rem 5%', backgroundColor: 'var(--surface)' }}>
         <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
           <h2 style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '1rem' }}>Everything you need to scale</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Stop bleeding money on bad setups. ZellaClone shows you exactly what works.</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Stop bleeding money on bad setups. OneTrade shows you exactly what works.</p>
         </div>
         
         <div style={{ 
