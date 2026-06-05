@@ -1,161 +1,217 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import styles from './TradeForm.module.css';
+import { createClient } from '@/utils/supabase/client';
 
 export default function TradeForm() {
   const router = useRouter();
+  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
+  const [accountId, setAccountId] = useState<string | null>(null);
   
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().slice(0, 16),
-    asset: '',
-    direction: 'Long',
-    entry_price: '',
-    exit_price: '',
-    stop_loss: '',
-    take_profit: '',
-    position_size: '',
-    pnl: '',
-    result: 'Open',
-    strategy: '',
-    notes: '',
-    emotions: '', // Comma separated for now
-    tags: '', // Comma separated
-  });
+  // Basic Trade state
+  const [asset, setAsset] = useState('');
+  const [direction, setDirection] = useState('Long');
+  const [status, setStatus] = useState('Closed');
+  const [netPnl, setNetPnl] = useState('');
+  const [setups, setSetups] = useState('');
+  const [mistakes, setMistakes] = useState('');
+  const [notes, setNotes] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  // Simplified: Auto-generated execution data
+  const [entryPrice, setEntryPrice] = useState('');
+  const [exitPrice, setExitPrice] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [tradeDate, setTradeDate] = useState(new Date().toISOString().slice(0, 16));
+
+  useEffect(() => {
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return router.push('/login');
+      setUserId(user.id);
+
+      // Fetch or create account
+      const { data: accounts } = await supabase.from('accounts').select('*').eq('user_id', user.id);
+      if (accounts && accounts.length > 0) {
+        setAccountId(accounts[0].id);
+      } else {
+        const { data: newAcc } = await supabase.from('accounts').insert([{
+          user_id: user.id,
+          name: 'Main Account',
+          balance: 100000
+        }]).select();
+        if (newAcc) setAccountId(newAcc[0].id);
+      }
+    }
+    init();
+  }, [router, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userId || !accountId) return setError('Account not initialized');
     setLoading(true);
     setError('');
 
-    // Process tags and emotions from comma separated strings to arrays
-    const emotionsArray = formData.emotions.split(',').map(e => e.trim()).filter(e => e);
-    const tagsArray = formData.tags.split(',').map(e => e.trim()).filter(e => e);
+    const setupsArray = setups.split(',').map(s => s.trim()).filter(Boolean);
+    const mistakesArray = mistakes.split(',').map(m => m.trim()).filter(Boolean);
+    const pnlValue = parseFloat(netPnl) || 0;
+    const winLoss = pnlValue > 0 ? 'Win' : pnlValue < 0 ? 'Loss' : 'Breakeven';
 
-    const { data, error: submitError } = await supabase.from('trades').insert([{
-      date: new Date(formData.date).toISOString(),
-      asset: formData.asset.toUpperCase(),
-      direction: formData.direction,
-      entry_price: parseFloat(formData.entry_price),
-      exit_price: formData.exit_price ? parseFloat(formData.exit_price) : null,
-      stop_loss: formData.stop_loss ? parseFloat(formData.stop_loss) : null,
-      take_profit: formData.take_profit ? parseFloat(formData.take_profit) : null,
-      position_size: formData.position_size ? parseFloat(formData.position_size) : null,
-      pnl: formData.pnl ? parseFloat(formData.pnl) : null,
-      result: formData.result,
-      strategy: formData.strategy,
-      notes: formData.notes,
-      emotions: emotionsArray,
-      tags: tagsArray
-    }]);
+    // 1. Insert Trade
+    const { data: tradeData, error: tradeError } = await supabase.from('trades').insert([{
+      user_id: userId,
+      account_id: accountId,
+      asset: asset.toUpperCase(),
+      direction,
+      status,
+      entry_date: new Date(tradeDate).toISOString(),
+      exit_date: status === 'Closed' ? new Date(tradeDate).toISOString() : null,
+      net_pnl: pnlValue,
+      win_loss: status === 'Closed' ? winLoss : 'Open',
+      setups: setupsArray,
+      mistakes: mistakesArray,
+      notes
+    }]).select();
+
+    if (tradeError) {
+      setLoading(false);
+      return setError(tradeError.message);
+    }
+
+    const tradeId = tradeData[0].id;
+    const qty = parseFloat(quantity) || 1;
+
+    // 2. Insert Executions (Simulated Entry and Exit)
+    const execsToInsert = [];
+    if (entryPrice) {
+      execsToInsert.push({
+        trade_id: tradeId,
+        action: direction === 'Long' ? 'Buy' : 'Sell',
+        price: parseFloat(entryPrice),
+        quantity: qty,
+        execution_date: new Date(tradeDate).toISOString()
+      });
+    }
+    if (exitPrice && status === 'Closed') {
+      execsToInsert.push({
+        trade_id: tradeId,
+        action: direction === 'Long' ? 'Sell' : 'Buy',
+        price: parseFloat(exitPrice),
+        quantity: qty,
+        execution_date: new Date(tradeDate).toISOString()
+      });
+    }
+
+    if (execsToInsert.length > 0) {
+      const { error: execError } = await supabase.from('executions').insert(execsToInsert);
+      if (execError) {
+        setLoading(false);
+        return setError('Trade saved, but executions failed: ' + execError.message);
+      }
+    }
 
     setLoading(false);
-
-    if (submitError) {
-      setError(submitError.message);
-    } else {
-      router.push('/trades');
-      router.refresh();
-    }
+    router.push('/dashboard');
+    router.refresh();
   };
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit}>
-      {error && <div className={styles.error}>{error}</div>}
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {error && <div style={{ color: 'var(--danger)', padding: '1rem', backgroundColor: 'var(--danger-bg)', borderRadius: 'var(--radius-md)' }}>{error}</div>}
       
-      <div className={styles.section}>
-        <h3>基础信息 (Basic Info)</h3>
-        <div className={styles.grid}>
-          <div className={styles.field}>
-            <label>交易时间 (Date & Time)*</label>
-            <input type="datetime-local" name="date" required value={formData.date} onChange={handleChange} />
+      {/* Container blocks */}
+      <div style={{ backgroundColor: 'var(--surface)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--surface-border)', boxShadow: 'var(--shadow-sm)' }}>
+        <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ width: '8px', height: '24px', backgroundColor: 'var(--primary)', borderRadius: '4px' }}></div>
+          Core Details
+        </h3>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+          <div>
+            <label style={labelStyle}>Date</label>
+            <input type="datetime-local" required value={tradeDate} onChange={e => setTradeDate(e.target.value)} style={inputStyle} />
           </div>
-          <div className={styles.field}>
-            <label>标的 (Asset)*</label>
-            <input type="text" name="asset" placeholder="e.g. BTCUSDT, AAPL" required value={formData.asset} onChange={handleChange} />
+          <div>
+            <label style={labelStyle}>Asset / Ticker</label>
+            <input type="text" placeholder="e.g. AAPL, BTC" required value={asset} onChange={e => setAsset(e.target.value)} style={inputStyle} />
           </div>
-          <div className={styles.field}>
-            <label>方向 (Direction)*</label>
-            <select name="direction" required value={formData.direction} onChange={handleChange}>
-              <option value="Long">做多 (Long)</option>
-              <option value="Short">做空 (Short)</option>
+          <div>
+            <label style={labelStyle}>Direction</label>
+            <select value={direction} onChange={e => setDirection(e.target.value)} style={inputStyle}>
+              <option value="Long">Long</option>
+              <option value="Short">Short</option>
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Status</label>
+            <select value={status} onChange={e => setStatus(e.target.value)} style={inputStyle}>
+              <option value="Closed">Closed</option>
+              <option value="Open">Open</option>
+              <option value="Breakeven">Breakeven</option>
             </select>
           </div>
         </div>
       </div>
 
-      <div className={styles.section}>
-        <h3>价格与盈亏 (Price & PnL)</h3>
-        <div className={styles.grid}>
-          <div className={styles.field}>
-            <label>进场价 (Entry Price)*</label>
-            <input type="number" step="any" name="entry_price" required value={formData.entry_price} onChange={handleChange} />
+      <div style={{ backgroundColor: 'var(--surface)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--surface-border)', boxShadow: 'var(--shadow-sm)' }}>
+        <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ width: '8px', height: '24px', backgroundColor: 'var(--warning)', borderRadius: '4px' }}></div>
+          Execution & Results
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+          <div>
+            <label style={labelStyle}>Quantity</label>
+            <input type="number" step="any" placeholder="Shares / Contracts" value={quantity} onChange={e => setQuantity(e.target.value)} style={inputStyle} />
           </div>
-          <div className={styles.field}>
-            <label>出场价 (Exit Price)</label>
-            <input type="number" step="any" name="exit_price" value={formData.exit_price} onChange={handleChange} />
+          <div>
+            <label style={labelStyle}>Avg Entry Price</label>
+            <input type="number" step="any" required value={entryPrice} onChange={e => setEntryPrice(e.target.value)} style={inputStyle} />
           </div>
-          <div className={styles.field}>
-            <label>止损价 (Stop Loss)</label>
-            <input type="number" step="any" name="stop_loss" value={formData.stop_loss} onChange={handleChange} />
+          <div>
+            <label style={labelStyle}>Avg Exit Price</label>
+            <input type="number" step="any" value={exitPrice} onChange={e => setExitPrice(e.target.value)} style={inputStyle} />
           </div>
-          <div className={styles.field}>
-            <label>止盈价 (Take Profit)</label>
-            <input type="number" step="any" name="take_profit" value={formData.take_profit} onChange={handleChange} />
-          </div>
-          <div className={styles.field}>
-            <label>仓位大小 (Position Size)</label>
-            <input type="number" step="any" name="position_size" value={formData.position_size} onChange={handleChange} />
-          </div>
-          <div className={styles.field}>
-            <label>总盈亏 (PnL, 金额)</label>
-            <input type="number" step="any" name="pnl" value={formData.pnl} onChange={handleChange} />
-          </div>
-          <div className={styles.field}>
-            <label>交易结果 (Result)</label>
-            <select name="result" value={formData.result} onChange={handleChange}>
-              <option value="Open">持仓中 (Open)</option>
-              <option value="Win">盈利 (Win)</option>
-              <option value="Loss">亏损 (Loss)</option>
-              <option value="Breakeven">保本 (Breakeven)</option>
-            </select>
+          <div>
+            <label style={labelStyle}>Net P&L ($)</label>
+            <input type="number" step="any" placeholder="e.g. 150.50 or -50" value={netPnl} onChange={e => setNetPnl(e.target.value)} style={{ ...inputStyle, borderColor: netPnl ? (parseFloat(netPnl) > 0 ? 'var(--success)' : 'var(--danger)') : 'var(--surface-border)' }} />
           </div>
         </div>
       </div>
 
-      <div className={styles.section}>
-        <h3>策略与情绪 (Strategy & Emotions)</h3>
-        <div className={styles.field}>
-          <label>使用的策略 (Strategy)</label>
-          <input type="text" name="strategy" placeholder="e.g. 突破回踩, 均线金叉" value={formData.strategy} onChange={handleChange} />
-        </div>
-        <div className={styles.grid}>
-          <div className={styles.field}>
-            <label>情绪标签 (Emotions, 逗号分隔)</label>
-            <input type="text" name="emotions" placeholder="e.g. 焦虑, 冲动, 自信" value={formData.emotions} onChange={handleChange} />
+      <div style={{ backgroundColor: 'var(--surface)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--surface-border)', boxShadow: 'var(--shadow-sm)' }}>
+        <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ width: '8px', height: '24px', backgroundColor: '#a855f7', borderRadius: '4px' }}></div>
+          Playbook & Notes
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          <div>
+            <label style={labelStyle}>Setups (Comma separated)</label>
+            <input type="text" placeholder="e.g. Breakout, Pullback" value={setups} onChange={e => setSetups(e.target.value)} style={inputStyle} />
           </div>
-          <div className={styles.field}>
-            <label>市场环境标签 (Tags, 逗号分隔)</label>
-            <input type="text" name="tags" placeholder="e.g. 顺势, 震荡, 新闻发布" value={formData.tags} onChange={handleChange} />
+          <div>
+            <label style={labelStyle}>Mistakes (Comma separated)</label>
+            <input type="text" placeholder="e.g. FOMO, Late Entry" value={mistakes} onChange={e => setMistakes(e.target.value)} style={inputStyle} />
           </div>
-        </div>
-        <div className={styles.field}>
-          <label>复盘笔记 (Notes)</label>
-          <textarea name="notes" rows={4} value={formData.notes} onChange={handleChange}></textarea>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={labelStyle}>Journal Notes</label>
+            <textarea rows={4} placeholder="What were you thinking during this trade?" value={notes} onChange={e => setNotes(e.target.value)} style={{ ...inputStyle, resize: 'vertical' }}></textarea>
+          </div>
         </div>
       </div>
 
-      <button type="submit" className={styles.submitBtn} disabled={loading}>
-        {loading ? '保存中...' : '保存交易记录'}
+      <button type="submit" disabled={loading} style={{
+        padding: '1rem', backgroundColor: 'var(--primary)', color: '#000', fontSize: '1.1rem', fontWeight: 700,
+        border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', boxShadow: 'var(--glow-primary)',
+        opacity: loading ? 0.7 : 1, transition: 'opacity 0.2s'
+      }}>
+        {loading ? 'Saving to Database...' : 'Log Trade'}
       </button>
     </form>
   );
 }
+
+const labelStyle = { display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 500, textTransform: 'uppercase' as const, letterSpacing: '0.5px' };
+const inputStyle = { width: '100%', padding: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--surface-border)', backgroundColor: 'var(--background)', color: 'var(--text-primary)', fontSize: '1rem', outline: 'none', transition: 'border-color 0.2s' };
