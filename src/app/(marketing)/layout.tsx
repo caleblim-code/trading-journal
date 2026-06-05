@@ -26,7 +26,7 @@ export default function MarketingLayout({
         <nav style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
           <Link href="/features" style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>Features</Link>
           <Link href="/pricing" style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>Pricing</Link>
-          <Link href="/dashboard" style={{ 
+          <Link href="/login" style={{ 
             fontWeight: 600, 
             backgroundColor: 'var(--primary)', 
             color: 'white', 
