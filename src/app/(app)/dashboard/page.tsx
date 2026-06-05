@@ -1,41 +1,32 @@
-export default function Home() {
+import { createClient } from '@/utils/supabase/server';
+import { redirect } from 'next/navigation';
+import DashboardView from '@/components/dashboard/DashboardView';
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Fetch all trades for the user
+  const { data: trades, error } = await supabase
+    .from('trades')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('entry_date', { ascending: true });
+
+  if (error) {
+    return <div>Error loading trades: {error.message}</div>;
+  }
+
   return (
     <div>
-      <h1 style={{ fontSize: '2rem', fontWeight: 600, marginBottom: '2rem' }}>仪表盘 (Dashboard)</h1>
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-        gap: '1.5rem',
-        marginBottom: '2rem'
-      }}>
-        {['总盈亏 (PnL)', '胜率 (Win Rate)', '总交易次数', '利润因子 (Profit Factor)'].map(kpi => (
-          <div key={kpi} style={{
-            backgroundColor: 'var(--surface)',
-            padding: '1.5rem',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-sm)',
-            border: '1px solid var(--surface-border)'
-          }}>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>{kpi}</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>--</div>
-          </div>
-        ))}
-      </div>
-      
-      <div style={{
-        backgroundColor: 'var(--surface)',
-        padding: '1.5rem',
-        borderRadius: 'var(--radius-md)',
-        boxShadow: 'var(--shadow-sm)',
-        border: '1px solid var(--surface-border)',
-        height: '300px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--text-tertiary)'
-      }}>
-        资金曲线图占位区域 (Equity Curve Chart Placeholder)
-      </div>
+      <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '2rem', letterSpacing: '-0.5px' }}>
+        Dashboard
+      </h1>
+      <DashboardView initialTrades={trades || []} />
     </div>
   );
 }
