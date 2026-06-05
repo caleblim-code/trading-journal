@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function LandingPage() {
   return (
     <div>
@@ -34,7 +36,7 @@ export default function LandingPage() {
           The ultimate automated trading journal that uncovers your hidden edge. Stop guessing and start analyzing your setups, mistakes, and profitability in real-time.
         </p>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-          <button style={{
+          <Link href="/signup" style={{
             padding: '1rem 2.5rem',
             fontSize: '1.1rem',
             fontWeight: 600,
@@ -43,9 +45,11 @@ export default function LandingPage() {
             border: 'none',
             borderRadius: 'var(--radius-lg)',
             cursor: 'pointer',
-            boxShadow: 'var(--glow-primary)'
-          }}>Get Started for Free</button>
-          <button style={{
+            boxShadow: 'var(--glow-primary)',
+            textDecoration: 'none',
+            display: 'inline-block'
+          }}>Get Started for Free</Link>
+          <Link href="/login" style={{
             padding: '1rem 2.5rem',
             fontSize: '1.1rem',
             fontWeight: 600,
@@ -53,8 +57,10 @@ export default function LandingPage() {
             color: 'var(--text-primary)',
             border: '1px solid var(--surface-border)',
             borderRadius: 'var(--radius-lg)',
-            cursor: 'pointer'
-          }}>View Demo</button>
+            cursor: 'pointer',
+            textDecoration: 'none',
+            display: 'inline-block'
+          }}>Log In</Link>
         </div>
         </div>
       </section>

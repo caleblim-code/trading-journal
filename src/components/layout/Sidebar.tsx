@@ -5,10 +5,11 @@ import { usePathname } from 'next/navigation';
 import styles from './Sidebar.module.css';
 
 const navItems = [
-  { name: '仪表盘 (Dashboard)', path: '/' },
-  { name: '交易记录 (Trades)', path: '/trades' },
-  { name: '分析 (Analytics)', path: '/analytics' },
-  { name: '设置 (Settings)', path: '/settings' },
+  { label: 'Dashboard', path: '/dashboard', icon: '📊' },
+  { label: 'Trades List', path: '/trades', icon: '📝' },
+  { label: 'Add Trade', path: '/trades/new', icon: '➕' },
+  { label: 'Analytics', path: '/analytics', icon: '📈' },
+  { label: 'Settings', path: '/settings', icon: '⚙️' },
 ];
 
 export default function Sidebar() {
@@ -29,7 +30,7 @@ export default function Sidebar() {
               href={item.path} 
               className={`${styles.navItem} ${isActive ? styles.active : ''}`}
             >
-              {item.name}
+              <span style={{ marginRight: '0.5rem' }}>{item.icon}</span> {item.label}
             </Link>
           );
         })}
